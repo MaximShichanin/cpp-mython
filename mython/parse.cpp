@@ -114,7 +114,7 @@ private:
 
         auto [it, inserted] = declared_classes_.insert({
             class_name,
-            runtime::ObjectHolder::Own(runtime::Class(class_name, std::move(methods), base_class)),
+            runtime::ObjectHolder::Own(runtime::Class{class_name, std::move(methods), base_class}),
         });
 
         if (!inserted) {

@@ -3,6 +3,7 @@
 #include "runtime.h"
 
 #include <functional>
+#include <iostream>
 
 namespace ast {
 
@@ -40,7 +41,11 @@ public:
     explicit VariableValue(const std::string& var_name);
     explicit VariableValue(std::vector<std::string> dotted_ids);
 
-    runtime::ObjectHolder Execute(runtime::Closure& closure, runtime::Context& context) override;
+    runtime::ObjectHolder Execute(runtime::Closure& closure, [[maybe_unused]] runtime::Context& context) override;
+private:
+    std::string head_;
+    std::vector<std::string> body_{};
+    std::string tail_{};
 };
 
 // Присваивает переменной, имя которой задано в параметре var, значение выражения rv
@@ -49,6 +54,9 @@ public:
     Assignment(std::string var, std::unique_ptr<Statement> rv);
 
     runtime::ObjectHolder Execute(runtime::Closure& closure, runtime::Context& context) override;
+private:
+    std::string name_;
+    std::unique_ptr<Statement> data_ptr_;
 };
 
 // Присваивает полю object.field_name значение выражения rv
@@ -57,6 +65,35 @@ public:
     FieldAssignment(VariableValue object, std::string field_name, std::unique_ptr<Statement> rv);
 
     runtime::ObjectHolder Execute(runtime::Closure& closure, runtime::Context& context) override;
+private:
+    VariableValue object_;
+    std::string field_name_;
+    std::unique_ptr<Statement> data_ptr_;
+};
+
+/*
+Создаёт новый экземпляр класса class_, передавая его конструктору набор параметров args.
+Если в классе отсутствует метод __init__ с заданным количеством аргументов,
+то экземпляр класса создаётся без вызова конструктора (поля объекта не будут проинициализированы):
+
+class Person:
+  def set_name(name):
+    self.name = name
+
+p = Person()
+# Поле name будет иметь значение только после вызова метода set_name
+p.set_name("Ivan")
+*/
+
+class NewInstance : public Statement {
+public:
+    explicit NewInstance(const runtime::Class& class_);
+    NewInstance(const runtime::Class& class_, std::vector<std::unique_ptr<Statement>> args);
+    // Возвращает объект, содержащий значение типа ClassInstance
+    runtime::ObjectHolder Execute(runtime::Closure& closure, runtime::Context& context) override;
+private:
+    runtime::ObjectHolder instance_holder_;
+    std::vector<std::unique_ptr<Statement>> args_;
 };
 
 // Значение None
@@ -82,6 +119,8 @@ public:
     // Во время выполнения команды print вывод должен осуществляться в поток, возвращаемый из
     // context.GetOutputStream()
     runtime::ObjectHolder Execute(runtime::Closure& closure, runtime::Context& context) override;
+private:
+    std::vector<std::unique_ptr<Statement>> data_;
 };
 
 // Вызывает метод object.method со списком параметров args
@@ -91,6 +130,10 @@ public:
                std::vector<std::unique_ptr<Statement>> args);
 
     runtime::ObjectHolder Execute(runtime::Closure& closure, runtime::Context& context) override;
+private:
+    std::unique_ptr<Statement> object_;
+    std::string method_;
+    std::vector<std::unique_ptr<Statement>> argv_;
 };
 
 /*
@@ -106,20 +149,16 @@ p = Person()
 # Поле name будет иметь значение только после вызова метода set_name
 p.set_name("Ivan")
 */
-class NewInstance : public Statement {
-public:
-    explicit NewInstance(const runtime::Class& class_);
-    NewInstance(const runtime::Class& class_, std::vector<std::unique_ptr<Statement>> args);
-    // Возвращает объект, содержащий значение типа ClassInstance
-    runtime::ObjectHolder Execute(runtime::Closure& closure, runtime::Context& context) override;
-};
 
 // Базовый класс для унарных операций
 class UnaryOperation : public Statement {
 public:
-    explicit UnaryOperation(std::unique_ptr<Statement> /*argument*/) {
-        // Реализуйте метод самостоятельно
+    explicit UnaryOperation(std::unique_ptr<Statement> argument) 
+        : arg_(std::move(argument))
+    {
     }
+protected:
+    std::unique_ptr<Statement> arg_;
 };
 
 // Операция str, возвращающая строковое значение своего аргумента
@@ -132,9 +171,14 @@ public:
 // Родительский класс Бинарная операция с аргументами lhs и rhs
 class BinaryOperation : public Statement {
 public:
-    BinaryOperation(std::unique_ptr<Statement> /*lhs*/, std::unique_ptr<Statement> /*rhs*/) {
-        // Реализуйте метод самостоятельно
+    BinaryOperation(std::unique_ptr<Statement> lhs, std::unique_ptr<Statement> rhs) 
+        : lhs_(std::move(lhs))
+        , rhs_(std::move(rhs))
+    {
     }
+protected:
+    std::unique_ptr<Statement> lhs_;
+    std::unique_ptr<Statement> rhs_;
 };
 
 // Возвращает результат операции + над аргументами lhs и rhs
@@ -209,22 +253,35 @@ public:
     runtime::ObjectHolder Execute(runtime::Closure& closure, runtime::Context& context) override;
 };
 
+template<typename T, typename... Args>
+void VariadicUnpack(std::vector<std::unique_ptr<Statement>>& container, T&& head, Args&&... args) {
+    container.emplace_back(std::forward<T>(head));
+    if constexpr (sizeof...(args) > 0u) {
+        VariadicUnpack(container, std::forward<Args>(args)...);
+    }
+}
+
 // Составная инструкция (например: тело метода, содержимое ветки if, либо else)
 class Compound : public Statement {
 public:
     // Конструирует Compound из нескольких инструкций типа unique_ptr<Statement>
     template <typename... Args>
-    explicit Compound(Args&&... /*args*/) {
-        // Реализуйте метод самостоятельно
+    explicit Compound(Args&&... args) 
+    {
+        if constexpr(sizeof...(args) > 0u) {
+            VariadicUnpack(argv_, std::forward<Args>(args)...);
+        }
     }
 
     // Добавляет очередную инструкцию в конец составной инструкции
-    void AddStatement(std::unique_ptr<Statement> /*stmt*/) {
-        // Реализуйте метод самостоятельно
+    void AddStatement(std::unique_ptr<Statement> stmt) {
+        argv_.emplace_back(std::move(stmt));
     }
 
     // Последовательно выполняет добавленные инструкции. Возвращает None
     runtime::ObjectHolder Execute(runtime::Closure& closure, runtime::Context& context) override;
+private:
+    std::vector<std::unique_ptr<Statement>> argv_;
 };
 
 // Тело метода. Как правило, содержит составную инструкцию
@@ -236,18 +293,23 @@ public:
     // Если внутри body была выполнена инструкция return, возвращает результат return
     // В противном случае возвращает None
     runtime::ObjectHolder Execute(runtime::Closure& closure, runtime::Context& context) override;
+private:
+    std::unique_ptr<Statement> arg_;
 };
 
 // Выполняет инструкцию return с выражением statement
 class Return : public Statement {
 public:
-    explicit Return(std::unique_ptr<Statement> /*statement*/) {
-        // Реализуйте метод самостоятельно
+    explicit Return(std::unique_ptr<Statement> statement) 
+        : statement_(std::move(statement))
+    {
     }
 
     // Останавливает выполнение текущего метода. После выполнения инструкции return метод,
     // внутри которого она была исполнена, должен вернуть результат вычисления выражения statement.
     runtime::ObjectHolder Execute(runtime::Closure& closure, runtime::Context& context) override;
+private:
+    std::unique_ptr<Statement> statement_;
 };
 
 // Объявляет класс
@@ -258,7 +320,9 @@ public:
 
     // Создаёт внутри closure новый объект, совпадающий с именем класса и значением, переданным в
     // конструктор
-    runtime::ObjectHolder Execute(runtime::Closure& closure, runtime::Context& context) override;
+    runtime::ObjectHolder Execute(runtime::Closure& closure, [[maybe_unused]] runtime::Context& context) override;
+private:
+    runtime::ObjectHolder class_;
 };
 
 // Инструкция if <condition> <if_body> else <else_body>
@@ -269,6 +333,10 @@ public:
            std::unique_ptr<Statement> else_body);
 
     runtime::ObjectHolder Execute(runtime::Closure& closure, runtime::Context& context) override;
+private:
+    std::unique_ptr<Statement> condition_;
+    std::unique_ptr<Statement> if_body_;
+    std::unique_ptr<Statement> else_body_;
 };
 
 // Операция сравнения
@@ -283,6 +351,8 @@ public:
     // Вычисляет значение выражений lhs и rhs и возвращает результат работы comparator,
     // приведённый к типу runtime::Bool
     runtime::ObjectHolder Execute(runtime::Closure& closure, runtime::Context& context) override;
+private:
+    Comparator cmp_;
 };
 
 }  // namespace ast

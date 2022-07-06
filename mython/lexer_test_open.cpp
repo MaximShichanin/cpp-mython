@@ -1,5 +1,5 @@
 #include "lexer.h"
-#include "test_runner.h"
+#include "test_runner_p.h"
 
 #include <sstream>
 #include <string>
@@ -273,6 +273,147 @@ print str(p)
     ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Eof{}));
 }
 
+void TestMythonProgram2() {
+    istringstream input(R"(
+class GCD:
+  def __init__():
+    self.call_count = 0
+
+  def calc(a, b):
+    self.call_count = self.call_count + 1
+    if a < b:
+      return self.calc(b, a)
+    if b == 0:
+      return a
+    return self.calc(a - b, b)
+
+x = GCD()
+print x.calc(510510, 18629977)
+print x.calc(22, 17)
+print x.call_count
+)"s);
+    Lexer lexer(input);
+    
+    ASSERT_EQUAL(lexer.CurrentToken(), Token(token_type::Class{}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Id{"GCD"s}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Char{':'}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Newline{}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Indent{}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Def{}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Id{"__init__"s}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Char{'('}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Char{')'}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Char{':'}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Newline{}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Indent{}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Id{"self"s}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Char{'.'}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Id{"call_count"s}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Char{'='}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Number{0}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Newline{}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Dedent{}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Def{}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Id{"calc"s}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Char{'('}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Id{"a"s}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Char{','}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Id{"b"s}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Char{')'}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Char{':'}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Newline{}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Indent{}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Id{"self"s}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Char{'.'}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Id{"call_count"s}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Char{'='}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Id{"self"s}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Char{'.'}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Id{"call_count"s}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Char{'+'}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Number{1}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Newline{}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::If{}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Id{"a"s}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Char{'<'}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Id{"b"s}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Char{':'}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Newline{}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Indent{}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Return{}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Id{"self"s}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Char{'.'}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Id{"calc"s}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Char{'('}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Id{"b"s}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Char{','}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Id{"a"s}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Char{')'}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Newline{}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Dedent{}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::If{}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Id{"b"s}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Eq{}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Number{0}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Char{':'}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Newline{}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Indent{}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Return{}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Id{"a"s}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Newline{}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Dedent{}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Return{}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Id{"self"s}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Char{'.'}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Id{"calc"s}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Char{'('}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Id{"a"s}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Char{'-'}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Id{"b"s}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Char{','}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Id{"b"s}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Char{')'}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Newline{}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Dedent{}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Dedent{}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Id{"x"s}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Char{'='}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Id{"GCD"s}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Char{'('}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Char{')'}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Newline{}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Print{}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Id{"x"s}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Char{'.'}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Id{"calc"s}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Char{'('}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Number{510510}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Char{','}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Number{18629977}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Char{')'}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Newline{}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Print{}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Id{"x"s}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Char{'.'}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Id{"calc"s}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Char{'('}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Number{22}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Char{','}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Number{17}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Char{')'}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Newline{}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Print{}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Id{"x"s}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Char{'.'}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Id{"call_count"s}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Newline{}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Eof{}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Eof{}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Eof{}));
+    ASSERT_EQUAL(lexer.NextToken(), Token(token_type::Eof{}));
+}
+
+
 void TestExpect() {
     istringstream is("bugaga"s);
     Lexer lex(is);
@@ -365,6 +506,7 @@ void RunOpenLexerTests(TestRunner& tr) {
     RUN_TEST(tr, parse::TestExpect);
     RUN_TEST(tr, parse::TestExpectNext);
     RUN_TEST(tr, parse::TestMythonProgram);
+    RUN_TEST(tr, parse::TestMythonProgram2);
     RUN_TEST(tr, parse::TestAlwaysEmitsNewlineAtTheEndOfNonemptyLine);
     RUN_TEST(tr, parse::TestCommentsAreIgnored);
 }

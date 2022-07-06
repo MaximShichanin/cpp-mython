@@ -1,6 +1,5 @@
 #include "statement.h"
-
-#include <test_runner.h>
+#include "test_runner_p.h"
 
 using namespace std;
 
@@ -152,7 +151,7 @@ void TestPrintVariable() {
 
     auto print_statement = Print::Variable("y"s);
     print_statement->Execute(closure, context);
-
+    std::string str = context.output.str();
     ASSERT_EQUAL(context.output.str(), "42\n"s);
 }
 
@@ -169,7 +168,7 @@ void TestPrintMultipleStatements() {
     args.push_back(make_unique<VariableValue>("empty"s));
 
     Print(std::move(args)).Execute(closure, context);
-
+    std::string str = context.output.str();
     ASSERT_EQUAL(context.output.str(), "hello 57 Python None\n"s);
 }
 

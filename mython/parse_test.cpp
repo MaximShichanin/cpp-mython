@@ -1,8 +1,7 @@
 #include "lexer.h"
 #include "parse.h"
 #include "statement.h"
-
-#include <test_runner.h>
+#include "test_runner_p.h"
 
 using namespace std;
 
@@ -28,8 +27,8 @@ print x + y, z + n
     runtime::Closure closure;
     auto tree = ParseProgramFromString(program);
     tree->Execute(closure, context);
-
-    ASSERT_EQUAL(context.output.str(), "9 hello, world\n"s);
+    std::string str = context.output.str();
+    ASSERT_EQUAL(str, "9 hello, world\n"s);
 }
 
 void TestProgramWithClasses() {
@@ -170,8 +169,8 @@ print x.call_count
     runtime::Closure closure;
     auto tree = ParseProgramFromString(program);
     tree->Execute(closure, context);
-
-    ASSERT_EQUAL(context.output.str(), "17\n1\n115\n"s);
+    std::string str = context.output.str();
+    ASSERT_EQUAL(str, "17\n1\n115\n"s);
 }
 
 void TestComplexLogicalExpression() {
@@ -245,6 +244,30 @@ print r, c, t1, t2
                  "Rect(10x20) Circle(52) Triangle(3, 4, 5) Wrong triangle\n"s);
 }
 
+void Test64() {
+    const string program = R"(
+class X:
+  def __init__(p):
+    p.x = self
+
+class XHolder:
+  def __init__():
+    dummy = 0
+
+xh = XHolder()
+x = X(xh)
+print xh.x, x
+)"s;
+
+    runtime::DummyContext context;
+
+    runtime::Closure closure;
+    auto tree = ParseProgramFromString(program);
+    tree->Execute(closure, context);
+    std::string str = context.output.str();
+    //ASSERT_EQUAL(str, "init XH\ninit X\n0 1\n"s);
+}
+
 }  // namespace parse
 
 void TestParseProgram(TestRunner& tr) {
@@ -256,4 +279,5 @@ void TestParseProgram(TestRunner& tr) {
     RUN_TEST(tr, parse::TestRecursion2);
     RUN_TEST(tr, parse::TestComplexLogicalExpression);
     RUN_TEST(tr, parse::TestClassicalPolymorphism);
+    RUN_TEST(tr, parse::Test64);
 }
