@@ -5,6 +5,7 @@
 #include "test_runner_p.h"
 
 #include <iostream>
+#include <getopt.h>
 
 using namespace std;
 
@@ -127,12 +128,31 @@ void TestAll() {
 
 }  // namespace
 
-int main() {
+int main(int argc, char** argv) {
+    const std::string help{
+R"(Usage: interpreter [OPTIONS]
+-h     - Print help and exit
+-t     - Run tests before start)"};
     try {
-        TestAll();
-
-        RunMythonProgram(cin, cout);
-    } catch (const std::exception& e) {
+        for(int opt = getopt(argc, argv, "ht"); opt != -1; opt = getopt(argc, argv, "ht")) {
+            switch(opt) {
+                case 't':
+                    TestAll();
+                    break;
+                case 'h':
+                    std::cout << help << std::endl;
+                    return 0;
+                case '?':
+                    std::cerr << help << std::endl;
+                    return 1;
+                default:
+                    std::cerr << "Unknown error\n"s;
+                    return 1;
+            }
+        }
+        RunMythonProgram(std::cin, std::cout);
+    }
+    catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
 		return 1;
     }

@@ -1,0 +1,14 @@
+class ExampleClass:
+  def __init__(name):
+    self.value = name
+
+  def add(word):
+    self.value = word + self.value
+
+  def __str__():
+    return str(self.value)
+
+x = ExampleClass("Mython")
+x.add('C++ love ')
+
+print x
